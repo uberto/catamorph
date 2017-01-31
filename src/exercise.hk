@@ -1,0 +1,55 @@
+
+
+module Main where
+
+fix :: ((a -> b) -> a -> b) -> a -> b
+fix f = f (fix f)
+
+data Fix f = In { out :: f (Fix f) }
+
+instance Show (f (Fix f)) => Show (Fix f) where
+  show (In f) = "(" ++ show f ++ ")"
+
+cata :: Functor f => (f a -> a) -> (Fix f -> a) -> Fix f -> a
+cata psi f = psi . fmap f . out
+
+cataRec :: Functor f => (f a -> a) -> Fix f -> a
+cataRec psi = fix (cata psi)
+
+data ExpF a = Var String
+            | App a a
+            | Lam String a
+            | Lit Int
+            | Let String a a
+            deriving (Functor, Show)
+
+type Exp = Fix ExpF
+
+var :: String -> Exp
+var x = In (Var x)
+
+app :: Exp -> Exp -> Exp
+app e1 e2 = In (App e1 e2)
+
+lam :: String -> Exp -> Exp
+lam s e = In (Lam s e)
+
+lit :: Int -> Exp
+lit x = In (Lit x)
+
+leT :: String -> Exp -> Exp -> Exp
+leT s v b = In (Let s v b)
+
+sample :: Exp
+sample = lam "x" $
+           leT "y" (lit 42) $
+             app (app (var "add") (var "x")) (var "y")
+
+-- TODO: Write the code to:
+--  1) Convert Let into Lambdas (let x = v in b => (x -> b) v)
+--  2) Inline constants ((x -> e) 42 => e with all instances of x substituted by 42)
+--  3) Apply the two transformations so that the final result is:
+--  converted = lam "x" (app (app (var "add") (var "x")) (lit 42))
+
+main :: IO ()
+main = print converted
